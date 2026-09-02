@@ -29,3 +29,36 @@ export const createBoard = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+
+// Get all board
+export const getBoards = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+
+    const boards = await prisma.board.findMany({
+      where: {
+        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+      },
+      include: {
+        owner: { select: { id: true, name: true, email: true } },
+        members: {
+          include: { user: { select: { id: true, name: true, email: true } } },
+        },
+        columns: { orderBy: { order: "asc" } },
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Fetch all boards successfully",
+      data: { boards },
+    });
+  } catch (error: any) {
+    console.log("Fetch all board error: ", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch board",
+    });
+  }
+};
