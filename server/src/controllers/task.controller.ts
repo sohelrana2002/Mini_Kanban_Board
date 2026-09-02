@@ -63,3 +63,45 @@ export const createTask = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+
+// Delete task
+export const deleteTask = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    const task = await prisma.task.findUnique({
+      where: { id: Number(id) },
+      include: { column: { include: { board: true } } },
+    });
+
+    if (!task)
+      return res.status(404).json({
+        success: false,
+        message: "Task not found",
+      });
+
+    const board = await prisma.board.findFirst({
+      where: {
+        id: task.column.board.id,
+        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+      },
+    });
+
+    if (!board)
+      return res.status(403).json({
+        success: false,
+        message: "Don't have access to delete task",
+      });
+
+    await prisma.task.delete({ where: { id: Number(id) } });
+
+    res.status(200).json({
+      success: true,
+      message: "Deleted task successfully",
+      taskId: id,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete task" });
+  }
+};
