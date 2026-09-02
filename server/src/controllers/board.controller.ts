@@ -109,3 +109,69 @@ export const getBoardById = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+
+// Shared board with other users and added
+export const shareBoard = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { userEmail } = req.body;
+    const userId = req.user!.id;
+
+    // Check owner board
+    const board = await prisma.board.findFirst({
+      where: { id: Number(id), ownerId: userId },
+    });
+
+    if (!board) {
+      return res.status(404).json({
+        success: false,
+        message: "Board not found or you are not the owner",
+      });
+    }
+
+    // Check user exist or not?
+    const userToAdd = await prisma.user.findUnique({
+      where: { email: userEmail },
+    });
+
+    if (!userToAdd) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // // Check user already exist or not?
+    const existing = await prisma.boardMember.findUnique({
+      where: {
+        boardId_userId: { boardId: Number(id), userId: userToAdd.id },
+      },
+    });
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "User already exist to this board",
+      });
+    }
+
+    await prisma.boardMember.create({
+      data: {
+        boardId: Number(id),
+        userId: userToAdd.id,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Board shared with ${userEmail}`,
+    });
+  } catch (error: any) {
+    console.log("Failed to share boar error: ", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to Failed to share boar",
+    });
+  }
+};
