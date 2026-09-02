@@ -7,6 +7,7 @@ import { errorHandler } from "./middlewares/errorHandler";
 import authRoutes from "./routes/auth.routes";
 import boardRoutes from "./routes/board.routes";
 import columnRoutes from "./routes/column.routes";
+import taskRoutes from "./routes/task.routes";
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/boards", boardRoutes);
 app.use("/api/columns", columnRoutes);
+app.use("/api/tasks", taskRoutes);
 
 // Health Check
 app.get("/api/health", (req, res) => {
