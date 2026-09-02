@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { createBoard } from "../controllers/board.controller";
+import { createBoard, getBoards } from "../controllers/board.controller";
 import { auth } from "../middlewares/auth";
 
 const router = Router();
 
 router.post("/", auth, createBoard);
+router.get("/", auth, getBoards);
 
 export default router;
