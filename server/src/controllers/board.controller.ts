@@ -62,3 +62,50 @@ export const getBoards = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+
+// Individual board info
+export const getBoardById = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    const board = await prisma.board.findFirst({
+      where: {
+        id: Number(id),
+        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+      },
+      include: {
+        owner: { select: { id: true, name: true, email: true } },
+        members: {
+          include: { user: { select: { id: true, name: true, email: true } } },
+        },
+        columns: {
+          orderBy: { order: "asc" },
+          include: {
+            tasks: { orderBy: { position: "asc" } },
+          },
+        },
+      },
+    });
+
+    if (!board) {
+      return res.status(404).json({
+        success: false,
+        message: "Board not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Individual board fetch successfully",
+      data: board,
+    });
+  } catch (error: any) {
+    console.log("Fetch single board error: ", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch single board",
+    });
+  }
+};
