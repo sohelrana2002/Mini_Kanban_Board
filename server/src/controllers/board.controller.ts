@@ -48,6 +48,13 @@ export const getBoards = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    if (!boards) {
+      return res.status(404).json({
+        success: false,
+        message: "Board not found",
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: "Fetch all boards successfully",
@@ -167,11 +174,47 @@ export const shareBoard = async (req: AuthRequest, res: Response) => {
       message: `Board shared with ${userEmail}`,
     });
   } catch (error: any) {
-    console.log("Failed to share boar error: ", error.message);
+    console.log("Failed to share board error: ", error.message);
 
     res.status(500).json({
       success: false,
-      message: "Failed to Failed to share boar",
+      message: "Failed to Failed to share board",
+    });
+  }
+};
+
+// Delete board
+export const deleteBoard = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    const boardExist = await prisma.board.findFirst({
+      where: { id: Number(id), ownerId: userId },
+    });
+
+    if (!boardExist) {
+      return res.status(404).json({
+        success: false,
+        message: "Board not found",
+      });
+    }
+
+    const board = await prisma.board.delete({
+      where: { id: Number(id), ownerId: userId },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Board deleted successfully",
+      id: board.id,
+    });
+  } catch (error: any) {
+    console.log("Failed to delete board error: ", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete board",
     });
   }
 };
