@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import prisma from "../config/prisma";
-import { hashPassword } from "../utils/bcrypt";
+import { hashPassword, comparePassword } from "../utils/bcrypt";
 import { generateToken } from "../utils/jwt";
 
 export const register = async (req: Request, res: Response) => {
@@ -21,11 +21,8 @@ export const register = async (req: Request, res: Response) => {
       data: { email, password: hashedPassword, name },
     });
 
-    const token = generateToken(user.id, user.email);
-
     res.status(201).json({
       success: true,
-      token,
       user: { id: user.id, email: user.email, name: user.name },
     });
   } catch (error: any) {
@@ -34,6 +31,45 @@ export const register = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: "Registration failed",
+    });
+  }
+};
+
+export const login = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    const isMatch = await comparePassword(password, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    const token = generateToken(user.id, user.email);
+
+    res.status(200).json({
+      success: true,
+      token,
+      user: { id: user.id, email: user.email, name: user.name },
+    });
+  } catch (error: any) {
+    console.log("User login error: ", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Login failed",
     });
   }
 };
