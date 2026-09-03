@@ -203,14 +203,72 @@ export const getColumnById = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Update column
+export const updateColumn = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const columnId = parseInt(req.params.columnId);
+    const { title } = req.body;
+
+    if (isNaN(columnId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid column ID",
+      });
+    }
+
+    if (!title || title === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Title is required",
+      });
+    }
+
+    const existingColumn = await prisma.column.findFirst({
+      where: {
+        id: columnId,
+        board: {
+          OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+        },
+      },
+      select: { id: true, boardId: true },
+    });
+
+    if (!existingColumn) {
+      return res.status(404).json({
+        success: false,
+        message: "Column not found or you don't have access to update it",
+      });
+    }
+
+    await prisma.column.update({
+      where: { id: columnId },
+      data: { title: title },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Column updated successfully",
+      columnId,
+    });
+  } catch (error: any) {
+    console.log("Failed to update column error: ", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 // Delete column
 export const deleteColumn = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const { columnId } = req.params;
     const userId = req.user!.id;
 
     const column = await prisma.column.findUnique({
-      where: { id: Number(id) },
+      where: { id: Number(columnId) },
       include: { board: true },
     });
 
@@ -234,18 +292,19 @@ export const deleteColumn = async (req: AuthRequest, res: Response) => {
         message: "Don't have access to delete column",
       });
 
-    await prisma.column.delete({ where: { id: Number(id) } });
+    await prisma.column.delete({ where: { id: Number(columnId) } });
+
     res.status(200).json({
       success: true,
       message: "Successfully deleted Column",
-      id,
+      columnId,
     });
   } catch (error: any) {
     console.log("Failed to delete column error: ", error.message);
 
     res.status(500).json({
       success: false,
-      message: "Failed to delete column",
+      message: "Internal server error",
     });
   }
 };
