@@ -59,7 +59,136 @@ export const createTask = async (req: AuthRequest, res: Response) => {
 
     res.status(500).json({
       success: false,
-      message: "Failed to create task",
+      message: "Internal server error",
+    });
+  }
+};
+
+// Get all task
+export const getTasks = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const columnId = req.query.columnId
+      ? parseInt(req.query.columnId as string)
+      : undefined;
+    const search = (req.query.search as string) || "";
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    // Pagination
+    const skip = (page - 1) * limit;
+
+    let boardIds: number[] = [];
+
+    if (columnId) {
+      const column = await prisma.column.findUnique({
+        where: { id: columnId },
+        include: { board: true },
+      });
+
+      if (!column) {
+        return res.status(404).json({
+          success: false,
+          message: "Column not found",
+        });
+      }
+
+      const board = await prisma.board.findFirst({
+        where: {
+          id: column.boardId,
+          OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+        },
+        select: { id: true },
+      });
+
+      if (!board) {
+        return res.status(403).json({
+          success: false,
+          message: "You don't have access to this column's board",
+        });
+      }
+
+      boardIds = [column.boardId];
+    } else {
+      const accessibleBoards = await prisma.board.findMany({
+        where: {
+          OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+        },
+        select: { id: true },
+      });
+      boardIds = accessibleBoards.map((b) => b.id);
+
+      if (boardIds.length === 0) {
+        return res.status(200).json({
+          success: true,
+          message: "No accessible boards found",
+          data: {
+            tasks: [],
+            pagination: {
+              total: 0,
+              page,
+              limit,
+              totalPages: 0,
+            },
+          },
+        });
+      }
+    }
+
+    const whereClause: any = {
+      column: {
+        boardId: { in: boardIds },
+      },
+    };
+
+    if (columnId) {
+      whereClause.columnId = columnId;
+    }
+
+    if (search !== undefined) {
+      whereClause.OR = [
+        { title: { contains: search.trim(), mode: "insensitive" } },
+      ];
+    }
+
+    const [tasks, totalCount] = await Promise.all([
+      prisma.task.findMany({
+        where: whereClause,
+        include: {
+          column: {
+            select: { id: true, title: true, boardId: true },
+          },
+          assignee: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+        orderBy: [{ columnId: "asc" }, { position: "asc" }],
+        skip,
+        take: limit,
+      }),
+
+      prisma.task.count({ where: whereClause }),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: "Tasks fetched successfully",
+      data: {
+        tasks,
+        pagination: {
+          total: totalCount,
+          page,
+          limit,
+          totalPages: Math.ceil(totalCount / limit),
+        },
+      },
+    });
+  } catch (error: any) {
+    console.log("Fetch tasks error: ", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
     });
   }
 };
@@ -67,11 +196,11 @@ export const createTask = async (req: AuthRequest, res: Response) => {
 // Delete task
 export const deleteTask = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const { taskId } = req.params;
     const userId = req.user!.id;
 
     const task = await prisma.task.findUnique({
-      where: { id: Number(id) },
+      where: { id: Number(taskId) },
       include: { column: { include: { board: true } } },
     });
 
@@ -94,12 +223,12 @@ export const deleteTask = async (req: AuthRequest, res: Response) => {
         message: "Don't have access to delete task",
       });
 
-    await prisma.task.delete({ where: { id: Number(id) } });
+    await prisma.task.delete({ where: { id: Number(taskId) } });
 
     res.status(200).json({
       success: true,
       message: "Deleted task successfully",
-      taskId: id,
+      taskId,
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to delete task" });
@@ -109,7 +238,7 @@ export const deleteTask = async (req: AuthRequest, res: Response) => {
 // Task move
 export const moveTask = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const { taskId: id } = req.params;
     const { targetColumnId, newPosition } = req.body;
     const userId = req.user!.id;
 
@@ -246,7 +375,7 @@ export const moveTask = async (req: AuthRequest, res: Response) => {
 
     res.status(500).json({
       success: false,
-      message: "Failed to create task",
+      message: "Internal server error",
     });
   }
 };
