@@ -148,6 +148,61 @@ export const getColumns = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Get columns by id
+export const getColumnById = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const columnId = parseInt(req.params.columnId);
+
+    if (isNaN(columnId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid column ID",
+      });
+    }
+
+    const column = await prisma.column.findFirst({
+      where: {
+        id: columnId,
+        board: {
+          OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+        },
+      },
+      include: {
+        board: {
+          select: { id: true, title: true, ownerId: true },
+        },
+        tasks: {
+          orderBy: { position: "asc" },
+          include: {
+            assignee: { select: { id: true, name: true, email: true } },
+          },
+        },
+      },
+    });
+
+    if (!column) {
+      return res.status(404).json({
+        success: false,
+        message: "Column not found or you don't have access",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Column fetched successfully",
+      data: { column },
+    });
+  } catch (error: any) {
+    console.log("Fetch single column error: ", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 // Delete column
 export const deleteColumn = async (req: AuthRequest, res: Response) => {
   try {
