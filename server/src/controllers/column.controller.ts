@@ -53,6 +53,101 @@ export const createColumn = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Fetch all columns
+export const getColumns = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+
+    // Query params
+    const boardId = req.query.boardId
+      ? parseInt(req.query.boardId as string)
+      : undefined;
+    const search = (req.query.search as string) || "";
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const whereClause: any = {
+      board: {
+        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+      },
+    };
+
+    if (boardId) {
+      whereClause.boardId = boardId;
+    }
+
+    if (search !== undefined) {
+      whereClause.title = {
+        contains: search.trim(),
+        mode: "insensitive",
+      };
+    }
+
+    const [columns, totalCount] = await Promise.all([
+      prisma.column.findMany({
+        where: whereClause,
+        include: {
+          board: {
+            select: { id: true, title: true, ownerId: true },
+          },
+          tasks: {
+            orderBy: { position: "asc" },
+            include: {
+              assignee: { select: { id: true, name: true, email: true } },
+            },
+          },
+        },
+        orderBy: [{ boardId: "asc" }, { order: "asc" }],
+        skip,
+        take: limit,
+      }),
+
+      prisma.column.count({
+        where: whereClause,
+      }),
+    ]);
+
+    if (columns.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No boards found for this user",
+        data: {
+          columns: [],
+          pagination: {
+            total: 0,
+            page: page,
+            limit: limit,
+            totalPages: 0,
+          },
+        },
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Columns fetched successfully",
+      data: {
+        columns,
+        pagination: {
+          total: totalCount,
+          page,
+          limit,
+          totalPages: Math.ceil(totalCount / limit),
+        },
+      },
+    });
+  } catch (error: any) {
+    console.log("Fetch columns error:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 // Delete column
 export const deleteColumn = async (req: AuthRequest, res: Response) => {
   try {

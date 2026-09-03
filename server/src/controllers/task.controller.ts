@@ -105,3 +105,148 @@ export const deleteTask = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: "Failed to delete task" });
   }
 };
+
+// Task move
+export const moveTask = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { targetColumnId, newPosition } = req.body;
+    const userId = req.user!.id;
+
+    const taskId = Number(id);
+    const targetColId = Number(targetColumnId);
+    const newPos = Number(newPosition);
+
+    // Find task
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: { column: { include: { board: true } } },
+    });
+
+    if (!task)
+      return res.status(404).json({
+        success: false,
+        message: "Task not found",
+      });
+
+    const sourceColId = task.columnId;
+    const oldPos = task.position;
+
+    // Check access the source of board
+    const sourceBoard = await prisma.board.findFirst({
+      where: {
+        id: task.column.board.id,
+        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+      },
+    });
+
+    if (!sourceBoard)
+      return res.status(403).json({
+        success: false,
+        message: "Don't access to move task",
+      });
+
+    // It target column is defferent then check target source
+    if (sourceColId !== targetColId) {
+      const targetColumn = await prisma.column.findUnique({
+        where: { id: targetColId },
+        include: { board: true },
+      });
+
+      if (!targetColumn)
+        return res.status(404).json({
+          success: false,
+          message: "Target column not found",
+        });
+
+      const targetBoard = await prisma.board.findFirst({
+        where: {
+          id: targetColumn.board.id,
+          OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+        },
+      });
+
+      if (!targetBoard)
+        return res.status(403).json({
+          success: false,
+          message: "Don't access to target board",
+        });
+    } else {
+      const tasksInCol = await prisma.task.count({
+        where: { columnId: sourceColId },
+      });
+
+      if (newPos < 0 || newPos >= tasksInCol) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid position",
+        });
+      }
+    }
+
+    // Update all
+    await prisma.$transaction(async (tx) => {
+      if (sourceColId === targetColId) {
+        if (oldPos < newPos) {
+          await tx.task.updateMany({
+            where: {
+              columnId: sourceColId,
+              position: { gt: oldPos, lte: newPos },
+            },
+            data: { position: { decrement: 1 } },
+          });
+        } else if (oldPos > newPos) {
+          await tx.task.updateMany({
+            where: {
+              columnId: sourceColId,
+              position: { gte: newPos, lt: oldPos },
+            },
+            data: { position: { increment: 1 } },
+          });
+        }
+
+        await tx.task.update({
+          where: { id: taskId },
+          data: { position: newPos },
+        });
+      } else {
+        await tx.task.updateMany({
+          where: {
+            columnId: sourceColId,
+            position: { gt: oldPos },
+          },
+          data: { position: { decrement: 1 } },
+        });
+
+        await tx.task.updateMany({
+          where: {
+            columnId: targetColId,
+            position: { gte: newPos },
+          },
+          data: { position: { increment: 1 } },
+        });
+
+        await tx.task.update({
+          where: { id: taskId },
+          data: {
+            columnId: targetColId,
+            position: newPos,
+          },
+        });
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Task moved successfully",
+      taskId: id,
+    });
+  } catch (error: any) {
+    console.log("Failed to move task: ", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to create task",
+    });
+  }
+};
