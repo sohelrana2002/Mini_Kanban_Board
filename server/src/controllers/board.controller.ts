@@ -25,7 +25,7 @@ export const createBoard = async (req: AuthRequest, res: Response) => {
 
     res.status(500).json({
       success: false,
-      message: "Failed to create board",
+      message: "Internal server error",
     });
   }
 };
@@ -308,7 +308,7 @@ export const getBoardById = async (req: AuthRequest, res: Response) => {
 
     res.status(500).json({
       success: false,
-      message: "Failed to fetch single board",
+      message: "Internal server error",
     });
   }
 };
@@ -374,7 +374,7 @@ export const shareBoard = async (req: AuthRequest, res: Response) => {
 
     res.status(500).json({
       success: false,
-      message: "Failed to Failed to share board",
+      message: "Internal server error",
     });
   }
 };
@@ -410,7 +410,7 @@ export const deleteBoard = async (req: AuthRequest, res: Response) => {
 
     res.status(500).json({
       success: false,
-      message: "Failed to delete board",
+      message: "Internal server error",
     });
   }
 };

@@ -30,7 +30,7 @@ export const register = async (req: Request, res: Response) => {
 
     res.status(500).json({
       success: false,
-      message: "Registration failed",
+      message: "Internal server error",
     });
   }
 };
@@ -69,7 +69,7 @@ export const login = async (req: Request, res: Response) => {
 
     res.status(500).json({
       success: false,
-      message: "Login failed",
+      message: "Internal server error",
     });
   }
 };

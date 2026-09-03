@@ -48,7 +48,7 @@ export const createColumn = async (req: AuthRequest, res: Response) => {
 
     res.status(500).json({
       success: false,
-      message: "Failed to create column",
+      message: "Internal server error",
     });
   }
 };
