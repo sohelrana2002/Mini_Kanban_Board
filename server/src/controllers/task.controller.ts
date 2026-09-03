@@ -259,6 +259,104 @@ export const getTaskById = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Update task
+export const updateTask = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const taskId = parseInt(req.params.taskId);
+    const { title, description, assigneeId } = req.body;
+
+    if (isNaN(taskId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid task ID",
+      });
+    }
+
+    const existingTask = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: {
+        column: {
+          include: {
+            board: true,
+          },
+        },
+      },
+    });
+
+    if (!existingTask) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found",
+      });
+    }
+
+    const board = await prisma.board.findFirst({
+      where: {
+        id: existingTask.column.boardId,
+        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+      },
+      select: { id: true },
+    });
+
+    if (!board) {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have access to update this task",
+      });
+    }
+
+    if (assigneeId !== undefined && assigneeId !== null) {
+      const isMember = await prisma.boardMember.findUnique({
+        where: {
+          boardId_userId: {
+            boardId: existingTask.column.boardId,
+            userId: assigneeId,
+          },
+        },
+      });
+
+      const isOwner = await prisma.board.findFirst({
+        where: {
+          id: existingTask.column.boardId,
+          ownerId: assigneeId,
+        },
+        select: { id: true },
+      });
+
+      if (!isMember && !isOwner) {
+        return res.status(400).json({
+          success: false,
+          message: "Assignee must be a member or owner of the board",
+        });
+      }
+    }
+
+    const updateData: any = {};
+    if (title !== undefined) updateData.title = title.trim();
+    if (description !== undefined) updateData.description = description;
+    if (assigneeId !== undefined) updateData.assigneeId = assigneeId;
+
+    await prisma.task.update({
+      where: { id: taskId },
+      data: updateData,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Task updated successfully",
+      taskId,
+    });
+  } catch (error: any) {
+    console.log("Update task error: ", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 // Delete task
 export const deleteTask = async (req: AuthRequest, res: Response) => {
   try {
