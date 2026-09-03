@@ -193,6 +193,72 @@ export const getTasks = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Get task by id
+export const getTaskById = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const taskId = parseInt(req.params.taskId);
+
+    if (isNaN(taskId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid task ID",
+      });
+    }
+
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: {
+        column: {
+          include: {
+            board: {
+              select: { title: true },
+            },
+          },
+        },
+        assignee: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found",
+      });
+    }
+
+    const board = await prisma.board.findFirst({
+      where: {
+        id: task.column.boardId,
+        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+      },
+      select: { id: true },
+    });
+
+    if (!board) {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have access to this task's board",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Task fetched successfully",
+      data: task,
+    });
+  } catch (error: any) {
+    console.log("Fetch single task error: ", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 // Delete task
 export const deleteTask = async (req: AuthRequest, res: Response) => {
   try {
