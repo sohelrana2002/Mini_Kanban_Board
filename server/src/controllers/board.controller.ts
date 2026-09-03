@@ -181,38 +181,87 @@ export const removeBoardMember = async (req: AuthRequest, res: Response) => {
 export const getBoards = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
+    const search = req.query.search as string;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
 
-    const boards = await prisma.board.findMany({
-      where: {
-        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
-      },
-      include: {
-        owner: { select: { id: true, name: true, email: true } },
-        members: {
-          include: { user: { select: { id: true, name: true, email: true } } },
+    // Pagination
+    const skip = (page - 1) * limit;
+
+    const whereClause: any = {
+      OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+    };
+
+    // Search function
+    if (search !== undefined) {
+      whereClause.title = {
+        contains: search.trim(),
+        mode: "insensitive",
+      };
+    }
+
+    const [boards, totalCount] = await Promise.all([
+      prisma.board.findMany({
+        where: whereClause,
+        include: {
+          owner: { select: { id: true, name: true, email: true } },
+          members: {
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+          },
+          columns: {
+            orderBy: { order: "asc" },
+            include: {
+              tasks: { orderBy: { position: "asc" } },
+            },
+          },
         },
-        columns: { orderBy: { order: "asc" } },
-      },
-    });
+        orderBy: { createdAt: "desc" },
+        skip: skip,
+        take: limit,
+      }),
 
-    if (!boards) {
-      return res.status(404).json({
-        success: false,
-        message: "Board not found",
+      prisma.board.count({
+        where: whereClause,
+      }),
+    ]);
+
+    if (boards.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No boards found for this user",
+        data: {
+          boards: [],
+          pagination: {
+            total: 0,
+            page: page,
+            limit: limit,
+            totalPages: 0,
+          },
+        },
       });
     }
 
     res.status(200).json({
       success: true,
       message: "Fetch all boards successfully",
-      data: { boards },
+      data: {
+        boards: boards,
+        pagination: {
+          total: totalCount,
+          page: page,
+          limit: limit,
+          totalPages: Math.ceil(totalCount / limit),
+        },
+      },
     });
   } catch (error: any) {
     console.log("Fetch all board error: ", error.message);
 
     res.status(500).json({
       success: false,
-      message: "Failed to fetch board",
+      message: "Internal server error",
     });
   }
 };
