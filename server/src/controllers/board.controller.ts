@@ -30,6 +30,66 @@ export const createBoard = async (req: AuthRequest, res: Response) => {
   }
 };
 
+//  Update Board
+export const updateBoardTitle = async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.id;
+  const boardId = parseInt(req.params.boardId);
+  const { title } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized User",
+    });
+  }
+
+  if (!title || title.trim() === "") {
+    return res.status(400).json({
+      success: false,
+      message: "Title is required",
+    });
+  }
+
+  try {
+    const board = await prisma.board.findUnique({
+      where: { id: boardId },
+      select: { ownerId: true },
+    });
+
+    if (!board) {
+      return res.status(404).json({
+        success: false,
+        message: "Board not found",
+      });
+    }
+
+    if (board.ownerId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not the owner of this board",
+      });
+    }
+
+    const updatedBoard = await prisma.board.update({
+      where: { id: boardId },
+      data: { title: title.trim() },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Board title updated successfully",
+      boardId,
+    });
+  } catch (error: any) {
+    console.error("Failed to update board error:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 // Get all board
 export const getBoards = async (req: AuthRequest, res: Response) => {
   try {
