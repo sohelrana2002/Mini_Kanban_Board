@@ -264,35 +264,34 @@ export const updateColumn = async (req: AuthRequest, res: Response) => {
 // Delete column
 export const deleteColumn = async (req: AuthRequest, res: Response) => {
   try {
-    const { columnId } = req.params;
+    const { columnId: id } = req.params;
     const userId = req.user!.id;
+    const columnId = Number(id);
 
-    const column = await prisma.column.findUnique({
-      where: { id: Number(columnId) },
-      include: { board: true },
+    const existingColumn = await prisma.column.findFirst({
+      where: {
+        id: columnId,
+        board: {
+          OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+        },
+      },
+      select: { id: true, boardId: true },
     });
 
-    if (!column)
+    if (!existingColumn)
       return res.status(404).json({
         success: false,
-        message: "Column not found",
+        message: "Column not found or you don't have access to delete it",
       });
 
-    // Check access
-    const board = await prisma.board.findFirst({
-      where: {
-        id: column.boardId,
-        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
-      },
-    });
-
-    if (!board)
-      return res.status(403).json({
-        success: false,
-        message: "Don't have access to delete column",
-      });
-
-    await prisma.column.delete({ where: { id: Number(columnId) } });
+    await prisma.$transaction([
+      prisma.task.deleteMany({
+        where: { columnId },
+      }),
+      prisma.column.delete({
+        where: { id: columnId },
+      }),
+    ]);
 
     res.status(200).json({
       success: true,
