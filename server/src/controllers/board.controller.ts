@@ -90,6 +90,93 @@ export const updateBoardTitle = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Remove board member
+export const removeBoardMember = async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.id;
+  const boardId = parseInt(req.params.boardId);
+  const memberId = parseInt(req.params.memberId);
+
+  if (!userId) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized access",
+    });
+  }
+
+  if (isNaN(boardId) || isNaN(memberId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Board ID and Member ID required",
+    });
+  }
+
+  try {
+    const board = await prisma.board.findUnique({
+      where: { id: boardId },
+      select: { ownerId: true },
+    });
+
+    if (!board) {
+      return res.status(404).json({
+        success: false,
+        message: "Board not found",
+      });
+    }
+
+    if (board.ownerId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Only the board owner can remove members",
+      });
+    }
+
+    if (memberId === board.ownerId) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot remove the board owner",
+      });
+    }
+
+    const memberRecord = await prisma.boardMember.findUnique({
+      where: {
+        boardId_userId: {
+          boardId: boardId,
+          userId: memberId,
+        },
+      },
+    });
+
+    if (!memberRecord) {
+      return res.status(404).json({
+        success: false,
+        message: "User is not a member of this board",
+      });
+    }
+
+    await prisma.boardMember.delete({
+      where: {
+        boardId_userId: {
+          boardId: boardId,
+          userId: memberId,
+        },
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Member removed from the board successfully",
+      memberId,
+    });
+  } catch (error: any) {
+    console.error("Failed to remove board error error: ", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 // Get all board
 export const getBoards = async (req: AuthRequest, res: Response) => {
   try {
