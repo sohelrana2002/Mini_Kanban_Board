@@ -93,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setToken(null);
     setUser(null);
+    toast.success("Successfully log out");
     router.push("/login");
   }, [router]);
 
