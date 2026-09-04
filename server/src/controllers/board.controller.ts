@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../middlewares/auth";
 import prisma from "../config/prisma";
+import { Prisma } from "@prisma/client";
 
 // Create board
 export const createBoard = async (req: AuthRequest, res: Response) => {
@@ -188,7 +189,7 @@ export const getBoards = async (req: AuthRequest, res: Response) => {
     // Pagination
     const skip = (page - 1) * limit;
 
-    const whereClause: any = {
+    const whereClause: Prisma.BoardWhereInput = {
       OR: [{ ownerId: userId }, { members: { some: { userId } } }],
     };
 
