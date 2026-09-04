@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { loginRequest, registerRequest } from "@/lib/services/auth.service";
 import { extractErrorMessage } from "@/lib/axios";
 import type { ApiUser } from "@/types";
+import { toast } from "react-toastify";
 
 interface AuthContextValue {
   user: ApiUser | null;
@@ -59,6 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       try {
         const data = await loginRequest({ email, password });
+        toast.success(data.message);
+
         persistSession(data.token, data.user);
         router.push("/boards");
       } catch (error) {
@@ -71,7 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (email: string, password: string, name: string) => {
       try {
-        await registerRequest({ email, password, name });
+        const res = await registerRequest({ email, password, name });
+        toast.success(res.message);
 
         const data = await loginRequest({ email, password });
         persistSession(data.token, data.user);
@@ -89,7 +93,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setToken(null);
     setUser(null);
-
     router.push("/login");
   }, [router]);
 
