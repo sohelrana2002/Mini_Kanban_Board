@@ -15,6 +15,7 @@ export interface LoginPayload {
 export async function registerRequest(payload: RegisterPayload) {
   const { data } = await api.post<{
     success: boolean;
+    message: string;
     user: { id: number; email: string; name: string | null };
   }>("/auth/register", payload);
 
