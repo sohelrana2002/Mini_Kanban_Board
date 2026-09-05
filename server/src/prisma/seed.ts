@@ -57,6 +57,13 @@ async function main() {
       name: "Showrab Kormokar",
     },
   });
+  const user7 = await prisma.user.create({
+    data: {
+      email: "sakib@test.com",
+      password: passwordHash,
+      name: "Nazmus Sakib",
+    },
+  });
 
   console.log("All user created successfully");
 
@@ -74,6 +81,7 @@ async function main() {
       { boardId: board1.id, userId: user3.id },
       { boardId: board1.id, userId: user4.id },
       { boardId: board1.id, userId: user5.id },
+      { boardId: board1.id, userId: user6.id },
     ],
   });
   console.log("4 members added to Board 1");
@@ -147,13 +155,13 @@ async function main() {
   });
   console.log("Board 2 created by User 6");
 
-  await prisma.boardMember.create({
-    data: {
-      boardId: board2.id,
-      userId: user1.id,
-    },
+  await prisma.boardMember.createMany({
+    data: [
+      { boardId: board2.id, userId: user1.id },
+      { boardId: board2.id, userId: user7.id },
+    ],
   });
-  console.log("User 1 added as member of Board 2");
+  console.log("User 1 & 7 added as member of Board 2");
 
   const col4 = await prisma.column.create({
     data: { title: "Backlog", order: 0, boardId: board2.id },
