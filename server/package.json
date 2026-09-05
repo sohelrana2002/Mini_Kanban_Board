@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "server.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "dev": "ts-node-dev --respawn --transpile-only server.ts",
     "start": "node dist/server.js"
   },
