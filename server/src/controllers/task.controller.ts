@@ -464,6 +464,17 @@ export const moveTask = async (req: AuthRequest, res: Response) => {
           success: false,
           message: "Don't access to target board",
         });
+
+      const tasksInTargetCol = await prisma.task.count({
+        where: { columnId: targetColId },
+      });
+
+      if (newPos < 0 || newPos > tasksInTargetCol) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid position",
+        });
+      }
     } else {
       const tasksInCol = await prisma.task.count({
         where: { columnId: sourceColId },
