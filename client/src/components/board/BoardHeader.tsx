@@ -10,7 +10,6 @@ import { ConfirmDialog } from "../ConfirmDialog";
 import { useDeleteBoard, useRemoveBoardMember } from "@/hooks/useBoards";
 import { extractErrorMessage } from "@/lib/axios";
 import Link from "next/link";
-import { toast } from "react-toastify";
 import { EditBoardTitle } from "./EditBoardTitle";
 
 export function BoardHeader({
@@ -108,19 +107,20 @@ export function BoardHeader({
                 <UserPlus size={15} />
                 <span className="hidden sm:inline">Share</span>
               </button>
+
+              <button
+                onClick={() => setIsEditingTitle(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-ink-600 px-3 py-2 text-sm text-mist-500 transition hover:border-green-400/40 hover:text-green-400"
+                aria-label="Edit board"
+              >
+                <Pencil size={15} />
+              </button>
               <button
                 onClick={() => setIsDeleteOpen(true)}
                 className="flex items-center gap-1.5 rounded-lg border border-ink-600 px-3 py-2 text-sm text-mist-500 transition hover:border-rose-400/40 hover:text-rose-400"
                 aria-label="Delete board"
               >
                 <Trash2 size={15} />
-              </button>
-              <button
-                onClick={() => setIsEditingTitle(true)}
-                className="flex items-center gap-1.5 rounded-lg border border-ink-600 px-3 py-2 text-sm text-mist-500 transition hover:border-rose-400/40 hover:text-rose-400"
-                aria-label="Edit board"
-              >
-                <Pencil size={15} />
               </button>
             </>
           )}
