@@ -390,26 +390,48 @@ export const deleteBoard = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user!.id;
+    const boardId = Number(id);
 
-    const boardExist = await prisma.board.findFirst({
-      where: { id: Number(id), ownerId: userId },
+    const board = await prisma.board.findFirst({
+      where: {
+        id: boardId,
+        ownerId: userId,
+      },
     });
 
-    if (!boardExist) {
+    if (!board) {
       return res.status(404).json({
         success: false,
-        message: "Board not found",
+        message: "Board not found or you are not the owner",
       });
     }
 
-    const board = await prisma.board.delete({
-      where: { id: Number(id), ownerId: userId },
+    await prisma.$transaction(async (tx) => {
+      const columns = await tx.column.findMany({
+        where: { boardId },
+        select: { id: true },
+      });
+      const columnIds = columns.map((col) => col.id);
+
+      if (columnIds.length > 0) {
+        await tx.task.deleteMany({
+          where: { columnId: { in: columnIds } },
+        });
+      }
+
+      await tx.column.deleteMany({
+        where: { boardId },
+      });
+
+      await tx.board.delete({
+        where: { id: boardId },
+      });
     });
 
     res.status(200).json({
       success: true,
       message: "Board deleted successfully",
-      id: board.id,
+      boardId: id,
     });
   } catch (error: any) {
     console.log("Failed to delete board error: ", error.message);
