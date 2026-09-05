@@ -1,29 +1,44 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { ChangeEvent, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { LayoutGrid, LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const { login } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { login, isAuthenticated } = useAuth();
+  const [loginForm, setLoginForm] = useState({
+    email: "",
+    password: "",
+  });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+
+  const handleOnChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+
+    setLoginForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     setIsSubmitting(true);
     try {
-      await login(email, password);
+      await login(loginForm.email, loginForm.password);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setIsSubmitting(false);
     }
   }
+
+  if (isAuthenticated) return router.replace("/boards");
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-ink-950 px-4">
@@ -57,8 +72,9 @@ export default function LoginPage() {
             <input
               type="email"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={loginForm.email}
+              name="email"
+              onChange={handleOnChange}
               placeholder="you@example.com"
               className="w-full rounded-lg border border-ink-500 bg-ink-900 px-3.5 py-2.5 text-sm text-mist-100 placeholder-mist-700 outline-none transition focus:border-amber-400/60"
             />
@@ -71,8 +87,9 @@ export default function LoginPage() {
             <input
               type="password"
               required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={loginForm.password}
+              name="password"
+              onChange={handleOnChange}
               placeholder="••••••••"
               className="w-full rounded-lg border border-ink-500 bg-ink-900 px-3.5 py-2.5 text-sm text-mist-100 placeholder-mist-700 outline-none transition focus:border-amber-400/60"
             />
@@ -90,7 +107,10 @@ export default function LoginPage() {
 
         <p className="mt-6 text-center text-sm text-mist-500">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="font-medium text-amber-400 hover:underline">
+          <Link
+            href="/register"
+            className="font-medium text-amber-400 hover:underline"
+          >
             Create one
           </Link>
         </p>
