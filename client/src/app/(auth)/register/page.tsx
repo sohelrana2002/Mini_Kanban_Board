@@ -4,9 +4,10 @@ import { ChangeEvent, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { UserPlus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
-  const { register } = useAuth();
+  const { register, isAuthenticated } = useAuth();
   const [userForm, setUserForm] = useState({
     name: "",
     email: "",
@@ -15,6 +16,7 @@ export default function RegisterPage() {
 
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
 
   const handleOnChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -39,6 +41,8 @@ export default function RegisterPage() {
       setIsSubmitting(false);
     }
   }
+
+  if (isAuthenticated) router.replace("/boards");
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-ink-950 px-4">
