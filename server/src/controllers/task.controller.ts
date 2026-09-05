@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { Response } from "express";
 import { AuthRequest } from "../middlewares/auth";
 import prisma from "../config/prisma";
@@ -116,7 +117,7 @@ export const getTasks = async (req: AuthRequest, res: Response) => {
         },
         select: { id: true },
       });
-      boardIds = accessibleBoards.map((b) => b.id);
+      boardIds = accessibleBoards.map((b: { id: number }) => b.id);
 
       if (boardIds.length === 0) {
         return res.status(200).json({
@@ -489,7 +490,7 @@ export const moveTask = async (req: AuthRequest, res: Response) => {
     }
 
     // Update all
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       if (sourceColId === targetColId) {
         if (oldPos < newPos) {
           await tx.task.updateMany({

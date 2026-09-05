@@ -1,7 +1,7 @@
+import { Prisma } from "@prisma/client";
 import { Response } from "express";
 import { AuthRequest } from "../middlewares/auth";
 import prisma from "../config/prisma";
-import { Prisma } from "@prisma/client";
 
 // Create board
 export const createBoard = async (req: AuthRequest, res: Response) => {
@@ -71,7 +71,7 @@ export const updateBoardTitle = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const updatedBoard = await prisma.board.update({
+    await prisma.board.update({
       where: { id: boardId },
       data: { title: title.trim() },
     });
@@ -406,12 +406,12 @@ export const deleteBoard = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const columns = await tx.column.findMany({
         where: { boardId },
         select: { id: true },
       });
-      const columnIds = columns.map((col) => col.id);
+      const columnIds = columns.map((col: { id: number }) => col.id);
 
       if (columnIds.length > 0) {
         await tx.task.deleteMany({
