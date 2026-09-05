@@ -134,3 +134,8 @@ conflict-free — both for same-column reordering and cross-column moves.
 - Passwords are hashed with bcrypt; tokens are signed JWTs valid for 7 days.
 - CORS is restricted to `http://localhost:3000` in `server/src/index.ts`.
 - `server/.env.example` and `client/.env.example` contain placeholder values only.
+
+---
+
+Made by Sohel Rana
+For any queries, feel free to open an issue or contact sohelrana110979@gmail.com.
