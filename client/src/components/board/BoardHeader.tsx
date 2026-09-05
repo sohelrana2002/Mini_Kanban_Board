@@ -26,6 +26,11 @@ export function BoardHeader({
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
+  // Member deletion state
+  const [isMemberDeleteOpen, setIsMemberDeleteOpen] = useState(false);
+  const [memberName, setMemberName] = useState<string>("");
+  const [memberDeletedId, setMemberDeletedId] = useState<number | null>(null);
+
   const deleteBoard = useDeleteBoard();
   const removeMember = useRemoveBoardMember(board.id);
 
@@ -36,6 +41,29 @@ export function BoardHeader({
         console.log(extractErrorMessage(err, "Could not delete the board")),
     });
   }
+
+  function handleDeleteMember() {
+    if (!memberDeletedId) return;
+
+    removeMember.mutate(memberDeletedId, {
+      onSuccess: () => {
+        setIsMemberDeleteOpen(false);
+        resetMemberDeleteState();
+      },
+      onError: (err) =>
+        console.log(extractErrorMessage(err, "Could not remove the member")),
+    });
+  }
+
+  const resetMemberDeleteState = () => {
+    setMemberName("");
+    setMemberDeletedId(null);
+  };
+
+  const handleCloseMemberModal = () => {
+    setIsMemberDeleteOpen(false);
+    resetMemberDeleteState();
+  };
 
   const people = [
     { ...board.owner, isOwner: true, memberRecordId: null as number | null },
@@ -58,7 +86,7 @@ export function BoardHeader({
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className={`font-display text-2xl font-semibold text-mist-100`}>
+          <h1 className="font-display text-2xl font-semibold text-mist-100">
             {board.title}
           </h1>
 
@@ -68,7 +96,7 @@ export function BoardHeader({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex -space-x-2">
+          <div className="flex space-x-1">
             {people.map((person) => (
               <div key={person.id} className="group relative">
                 <div className="ring-2 ring-ink-950 rounded-full">
@@ -80,16 +108,14 @@ export function BoardHeader({
                 </div>
                 {isOwner && !person.isOwner && person.memberRecordId && (
                   <button
-                    onClick={() =>
-                      removeMember.mutate(person.memberRecordId as number, {
-                        onError: (err) =>
-                          console.log(
-                            extractErrorMessage(err, "Could not remove member"),
-                          ),
-                      })
-                    }
+                    onClick={() => {
+                      setMemberName(person.name || person.email);
+                      setMemberDeletedId(person.memberRecordId);
+                      setIsMemberDeleteOpen(true);
+                    }}
                     aria-label={`Remove ${person.name || person.email}`}
-                    className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-white group-hover:flex"
+                    title={`Want to remove ${person.name || person.email}`}
+                    className="absolute -right-1 -top-1 hidden h-4 w-4 z-[20] items-center justify-center rounded-full bg-rose-500 text-white group-hover:flex"
                   >
                     <X size={10} strokeWidth={3} />
                   </button>
@@ -115,6 +141,7 @@ export function BoardHeader({
               >
                 <Pencil size={15} />
               </button>
+
               <button
                 onClick={() => setIsDeleteOpen(true)}
                 className="flex items-center gap-1.5 rounded-lg border border-ink-600 px-3 py-2 text-sm text-mist-500 transition hover:border-rose-400/40 hover:text-rose-400"
@@ -152,6 +179,16 @@ export function BoardHeader({
         description={`"${board.title}" and everything in it will be permanently deleted for all members.`}
         confirmLabel="Delete board"
         isLoading={deleteBoard.isPending}
+      />
+
+      <ConfirmDialog
+        isOpen={isMemberDeleteOpen}
+        onClose={handleCloseMemberModal}
+        onConfirm={handleDeleteMember}
+        title="Remove board member?"
+        description={`Are you sure you want to remove "${memberName}" from this board?`}
+        confirmLabel="Remove member"
+        isLoading={removeMember.isPending}
       />
     </div>
   );
