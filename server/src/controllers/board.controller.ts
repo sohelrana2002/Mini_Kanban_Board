@@ -286,7 +286,12 @@ export const getBoardById = async (req: AuthRequest, res: Response) => {
         columns: {
           orderBy: { order: "asc" },
           include: {
-            tasks: { orderBy: { position: "asc" } },
+            tasks: {
+              orderBy: { position: "asc" },
+              include: {
+                assignee: { select: { id: true, name: true, email: true } },
+              },
+            },
           },
         },
       },
