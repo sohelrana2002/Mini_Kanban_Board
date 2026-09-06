@@ -423,6 +423,10 @@ export const deleteBoard = async (req: AuthRequest, res: Response) => {
         where: { boardId },
       });
 
+      await tx.boardMember.deleteMany({
+        where: { boardId },
+      });
+
       await tx.board.delete({
         where: { id: boardId },
       });
