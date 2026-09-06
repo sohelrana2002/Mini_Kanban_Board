@@ -17,18 +17,13 @@ const allowedOrigins = [
   "http://localhost:3000",
   "https://mini-kanban-board-icuv.onrender.com",
   "https://kanban-client1.netlify.app",
+  "https://ideal-goldfish-x5w9vj569p77cvw6w-5000.app.github.dev",
+  "https://ideal-goldfish-x5w9vj569p77cvw6w-3000.app.github.dev",
 ];
-
-// Any Codespaces-forwarded frontend URL, e.g. https://xxxx-3000.app.github.dev
-const codespacesOriginPattern = /^https:\/\/.*-3000\.app\.github\.dev$/;
 
 const corsOptions = {
   origin: function (origin: any, callback: any) {
-    if (
-      !origin ||
-      allowedOrigins.includes(origin) ||
-      codespacesOriginPattern.test(origin)
-    ) {
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
