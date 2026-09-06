@@ -16,6 +16,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:3000",
   "https://mini-kanban-board-icuv.onrender.com",
+  "https://kanban-client1.netlify.app",
 ];
 
 const corsOptions = {
