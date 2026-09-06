@@ -15,6 +15,7 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:3000",
+  "https://mini-kanban-board-icuv.onrender.com",
 ];
 
 const corsOptions = {
@@ -39,6 +40,14 @@ app.use("/api/auth", authRoutes);
 app.use("/api/boards", boardRoutes);
 app.use("/api/columns", columnRoutes);
 app.use("/api/tasks", taskRoutes);
+
+// Default Route
+app.get("/", (req, res) => {
+  res.json({
+    status: "OK",
+    message: "Server is Live",
+  });
+});
 
 // Health Check
 app.get("/api/health", (req, res) => {
