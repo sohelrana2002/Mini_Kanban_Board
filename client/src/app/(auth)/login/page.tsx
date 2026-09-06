@@ -5,6 +5,7 @@ import Link from "next/link";
 import { LayoutGrid, LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+const isProduction = process.env.NEXT_PUBLIC_IS_PRODUCTION === "true";
 
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
@@ -43,27 +44,28 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-ink-950 px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-amber-400 text-ink-950">
+        <div className="mb-5 flex items-center justify-center gap-4">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-400 text-ink-950">
             <LayoutGrid size={22} strokeWidth={2.5} />
           </span>
           <h1 className="font-display text-2xl font-semibold text-mist-100">
             Welcome back
           </h1>
-          <p className="mt-1.5 text-sm text-mist-500">
-            Sign in to get to your boards.
-          </p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl border border-ink-600 bg-ink-800 p-6 shadow-panel"
+          className="rounded-2xl border border-ink-600 bg-ink-800 p-5 shadow-panel"
         >
           {error && (
             <div className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-400">
               {error}
             </div>
           )}
+
+          <p className="mb-2 text-md text-mist-200">
+            Sign in to get to your boards.
+          </p>
 
           <label className="mb-4 block">
             <span className="mb-1.5 block text-sm font-medium text-mist-300">
@@ -105,7 +107,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-mist-500">
+        <p className="mt-4 text-center text-sm text-mist-500">
           Don&apos;t have an account?{" "}
           <Link
             href="/register"
@@ -114,6 +116,30 @@ export default function LoginPage() {
             Create one
           </Link>
         </p>
+
+        {isProduction && (
+          <div className="mt-4 rounded-2xl border border-ink-600 bg-ink-800 p-5 shadow-panel">
+            <p className="text-[17px] text-mist-500">Demo Credentials</p>
+
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-[15px] text-mist-500">
+                sohel@test.com / 123456
+              </p>
+
+              <button
+                onClick={() =>
+                  setLoginForm({
+                    email: "sohel@test.com",
+                    password: "123456",
+                  })
+                }
+                className="px-3 py-[6px] flex items-center justify-center bg-amber-400 rounded-md text-sm font-semibold text-ink-950 transition hover:bg-amber-500 disabled:opacity-60"
+              >
+                Try This
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
