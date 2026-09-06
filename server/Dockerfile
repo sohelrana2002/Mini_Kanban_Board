@@ -1,6 +1,8 @@
 FROM node:20-alpine AS base
 WORKDIR /app
 
+RUN apk add --no-cache openssl
+
 # Install dependencies (needed for prisma generate)
 COPY package*.json ./
 RUN npm install
