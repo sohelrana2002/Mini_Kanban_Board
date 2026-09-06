@@ -19,9 +19,16 @@ const allowedOrigins = [
   "https://kanban-client1.netlify.app",
 ];
 
+// Any Codespaces-forwarded frontend URL, e.g. https://xxxx-3000.app.github.dev
+const codespacesOriginPattern = /^https:\/\/.*-3000\.app\.github\.dev$/;
+
 const corsOptions = {
   origin: function (origin: any, callback: any) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (
+      !origin ||
+      allowedOrigins.includes(origin) ||
+      codespacesOriginPattern.test(origin)
+    ) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
