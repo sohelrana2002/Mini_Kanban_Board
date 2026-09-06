@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { AuthProvider } from "@/context/AuthContext";
+import { Footer } from "@/components/Footer";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -34,7 +35,10 @@ export function Providers({ children }: { children: ReactNode }) {
         pauseOnHover
         theme="dark"
       />
-      <AuthProvider>{children}</AuthProvider>
+      <AuthProvider>
+        {children}
+        <Footer />
+      </AuthProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

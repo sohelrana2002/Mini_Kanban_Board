@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Sora, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { Footer } from "@/components/Footer";
 
 const sora = Sora({
   subsets: ["latin"],
@@ -26,7 +27,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${sora.variable} ${inter.variable}`}>
+    <html
+      lang="en"
+      className={`flex min-h-screen flex-col font-body antialiased ${sora.variable} ${inter.variable}`}
+    >
       <body className="min-h-screen font-body antialiased">
         <Providers>{children}</Providers>
       </body>
