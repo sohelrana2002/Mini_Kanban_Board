@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LayoutGrid, Plus, Search } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
@@ -21,6 +21,7 @@ function BoardsDashboard() {
 
   const [searchInput, setSearchInput] = useState(search);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Keep the local input in sync if the URL changes from elsewhere (e.g. back button).
   useEffect(() => setSearchInput(search), [search]);
@@ -49,10 +50,29 @@ function BoardsDashboard() {
     router.push(`/boards?${params.toString()}`);
   }
 
-  function handleSearchSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    updateQuery({ search: searchInput.trim() });
+  function handleOnChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const value = event.target.value;
+    setSearchInput(value);
+
+    // Clear old timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // set new timeout
+    timeoutRef.current = setTimeout(() => {
+      updateQuery({ search: value.trim() });
+    }, 500);
   }
+
+  // Component unmount clear timer
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const boards = data?.data?.boards ?? [];
   const pagination = data?.data?.pagination;
@@ -77,20 +97,21 @@ function BoardsDashboard() {
         </button>
       </div>
 
-      <form onSubmit={handleSearchSubmit} className="mb-6">
+      <div className="mb-6">
         <div className="relative max-w-sm">
           <Search
             size={16}
             className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-mist-700"
           />
           <input
+            type="search"
             value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
+            onChange={handleOnChange}
             placeholder="Search boards…"
             className="w-full rounded-lg border border-ink-500 bg-ink-800 py-2.5 pl-10 pr-3.5 text-sm text-mist-100 placeholder-mist-700 outline-none transition focus:border-amber-400/60"
           />
         </div>
-      </form>
+      </div>
 
       {isLoading && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
