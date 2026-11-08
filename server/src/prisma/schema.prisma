@@ -21,15 +21,14 @@ model User {
 }
 
 model RefreshToken {
-  id            Int       @id @default(autoincrement())
-  tokenHash     String    @unique
-  userId        Int
-  expiresAt     DateTime
-  revokedAt     DateTime?
-  createdAt     DateTime  @default(now())
+  id          Int      @id @default(autoincrement())
+  tokenHash   String   @unique
+  userId      Int
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
 
-  user          User      @relation(fields: [userId],
-  references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Board {
