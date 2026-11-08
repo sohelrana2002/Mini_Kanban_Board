@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { verifyToken } from "../utils/jwt";
+import { verifyAccessToekn } from "../utils/jwt";
 
 export interface AuthRequest extends Request {
   user?: {
@@ -9,17 +9,16 @@ export interface AuthRequest extends Request {
 }
 
 export const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
+  const token = req.cookies?.accessToken;
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  if (!token) {
     return res.status(401).json({
       success: false,
       message: "Unauthorized no token provided",
     });
   }
 
-  const token = authHeader.split(" ")[1];
-  const decoded = verifyToken(token);
+  const decoded = verifyAccessToekn(token);
 
   if (!decoded) {
     return res.status(401).json({
