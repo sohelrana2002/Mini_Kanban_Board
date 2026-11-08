@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser"; // Importing cookie-parser for parsing cookies
 import dotenv from "dotenv";
 import { errorHandler } from "./middlewares/errorHandler";
 
@@ -41,6 +42,7 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
+app.use(cookieParser()); // Use cookie-parser middleware
 app.use(express.json());
 
 // Routes
