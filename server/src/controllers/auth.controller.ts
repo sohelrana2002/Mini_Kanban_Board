@@ -182,3 +182,39 @@ export const refresh = async (req: Request, res: Response) => {
     });
   }
 };
+
+// clears both cookies, and revokes the refresh token in the DB —
+// just deleting cookies isn't enough, since the raw refresh token could still
+// be replayed against /auth/refresh if it weren't also invalidated server-side.
+export const logout = async (req: Request, res: Response) => {
+  try {
+    const token = req.cookies?.refreshToken;
+
+    if (token) {
+      const tokenHash = hashRefreshToken(token);
+      await prisma.refreshToken
+        .updateMany({
+          where: { tokenHash, revokedAt: null },
+          data: { revokedAt: new Date() },
+        })
+        .catch((err) => {
+          console.error("Error revoking refresh token: ", err);
+        });
+    }
+
+    res.clearCookie("accessToken", accessCookieOptions);
+    res.clearCookie("refreshToken", refreshCookieOptions);
+
+    res.status(200).json({
+      success: true,
+      message: "User logged out successfully",
+    });
+  } catch (error: any) {
+    console.log("User logout error: ", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
