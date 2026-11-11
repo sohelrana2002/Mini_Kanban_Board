@@ -8,6 +8,7 @@ import {
   REFRESH_TOKEN_MAX_AGE_MS,
   verifyRefreshToken,
 } from "../utils/jwt";
+import { AuthRequest } from "../middlewares/auth";
 
 const baseCookieOptions = {
   httpOnly: true,
@@ -211,6 +212,41 @@ export const logout = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.log("User logout error: ", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// Lets the frontend restore a session on page load/refresh. Since the
+// accessToken cookie is httpOnly (unreadable by JS), the client can't know
+// "am I logged in?" on its own — it calls this endpoint (cookie sent
+// automatically by the browser) and the `auth` middleware fills in req.user
+// from the accessToken. If the accessToken has expired, the frontend's axios
+// interceptor transparently calls /auth/refresh first and retries this.
+export const me = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user?.id },
+      select: { id: true, email: true, name: true },
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized user not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User retrieved successfully",
+      user: { id: user.id, email: user.email, name: user.name },
+    });
+  } catch (error: any) {
+    console.log("Get user info error: ", error.message);
 
     res.status(500).json({
       success: false,
