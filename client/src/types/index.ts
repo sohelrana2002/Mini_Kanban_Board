@@ -58,7 +58,6 @@ export interface ApiEnvelope<T> {
 export interface AuthResponse {
   success: boolean;
   message?: string;
-  token: string;
   user: ApiUser;
 }
 
