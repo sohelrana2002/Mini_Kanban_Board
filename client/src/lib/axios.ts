@@ -8,37 +8,59 @@ export const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true,
 });
 
-// Attach the bearer token (if present) to every outgoing request.
-api.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token = window.localStorage.getItem("kanban_token");
+let refreshPromise: Promise<unknown> | null = null;
 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
-  return config;
-});
+function isAuthRoute(url: string | undefined, ...paths: string[]) {
+  return Boolean(url && paths.some((p) => url.includes(p)));
+}
 
-// Central 401 handling: drop the stale session and bounce to /login.
+// on a 401, try a single silent refresh (POST /auth/refresh, which
+// reads the longer-lived "refreshToken" cookie and issues a new "accessToken"
+// cookie) and retry the original request once. Only if the refresh itself
+// fails do we treat the session as truly over and bounce to /login — this is
+// what lets a 15-minute access token feel invisible to the user instead of
+// forcing a re-login every 15 minutes.
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const orginalRequest = error?.config;
+
+    const isUnauthorized = error?.response?.status === 401;
+    const isAuthEndpoint = isAuthRoute(
+      orginalRequest?.url,
+      "/auth/login",
+      "/auth/register",
+      "/auth/refresh",
+    );
+
     if (
-      typeof window !== "undefined" &&
-      error?.response?.status === 401 &&
-      !error?.config?.url?.includes("/auth/login")
+      typeof window === "undefined" ||
+      !isUnauthorized ||
+      isAuthEndpoint ||
+      orginalRequest?._retrivedAfterRefresh
     ) {
-      window.localStorage.removeItem("kanban_token");
-      window.localStorage.removeItem("kanban_user");
+      return Promise.reject(error);
+    }
+
+    orginalRequest._retrivedAfterRefresh = true;
+
+    try {
+      if (!refreshPromise) {
+        refreshPromise = api.post("/auth/refresh").finally(() => {
+          refreshPromise = null;
+        });
+      }
+      await refreshPromise;
+
+      return api(orginalRequest);
+    } catch (error) {
       if (!window.location.pathname.startsWith("/login")) {
         window.location.href = "/login";
       }
     }
-
-    return Promise.reject(error);
   },
 );
 
