@@ -10,10 +10,12 @@ import {
 } from "../utils/jwt";
 import { AuthRequest } from "../middlewares/auth";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const baseCookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax" as const,
+  secure: isProduction,
+  sameSite: isProduction ? ("none" as const) : ("lax" as const),
 };
 
 // accessToken is short-lived (15m, see jwt.ts) and sent with every request.
