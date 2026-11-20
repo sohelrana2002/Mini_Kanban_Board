@@ -40,13 +40,14 @@ api.interceptors.response.use(
       typeof window === "undefined" ||
       !isUnauthorized ||
       isAuthEndpoint ||
-      originalRequest?._retrivedAfterRefresh
+      originalRequest?._retriedAfterRefresh
     ) {
       return Promise.reject(error);
     }
 
-    originalRequest._retrivedAfterRefresh = true;
+    originalRequest._retriedAfterRefresh = true;
 
+    // Concurrent Refresh Request Handling
     try {
       if (!refreshPromise) {
         refreshPromise = api.post("/auth/refresh").finally(() => {
@@ -56,10 +57,12 @@ api.interceptors.response.use(
       await refreshPromise;
 
       return api(originalRequest);
-    } catch (error) {
+    } catch (refreshError) {
       if (!window.location.pathname.startsWith("/login")) {
         window.location.href = "/login";
       }
+
+      return Promise.reject(refreshError);
     }
   },
 );
