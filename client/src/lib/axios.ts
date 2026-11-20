@@ -26,11 +26,11 @@ function isAuthRoute(url: string | undefined, ...paths: string[]) {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const orginalRequest = error?.config;
+    const originalRequest = error?.config;
 
     const isUnauthorized = error?.response?.status === 401;
     const isAuthEndpoint = isAuthRoute(
-      orginalRequest?.url,
+      originalRequest?.url,
       "/auth/login",
       "/auth/register",
       "/auth/refresh",
@@ -40,12 +40,12 @@ api.interceptors.response.use(
       typeof window === "undefined" ||
       !isUnauthorized ||
       isAuthEndpoint ||
-      orginalRequest?._retrivedAfterRefresh
+      originalRequest?._retrivedAfterRefresh
     ) {
       return Promise.reject(error);
     }
 
-    orginalRequest._retrivedAfterRefresh = true;
+    originalRequest._retrivedAfterRefresh = true;
 
     try {
       if (!refreshPromise) {
@@ -55,7 +55,7 @@ api.interceptors.response.use(
       }
       await refreshPromise;
 
-      return api(orginalRequest);
+      return api(originalRequest);
     } catch (error) {
       if (!window.location.pathname.startsWith("/login")) {
         window.location.href = "/login";
