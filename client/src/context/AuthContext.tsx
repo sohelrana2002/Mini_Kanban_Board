@@ -10,14 +10,18 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import { loginRequest, registerRequest } from "@/lib/services/auth.service";
+import {
+  loginRequest,
+  registerRequest,
+  meRequest,
+  logoutRequest,
+} from "@/lib/services/auth.service";
 import { extractErrorMessage } from "@/lib/axios";
 import type { ApiUser } from "@/types";
 import { toast } from "react-toastify";
 
 interface AuthContextValue {
   user: ApiUser | null;
-  token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -27,33 +31,32 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const TOKEN_KEY = "kanban_token";
-const USER_KEY = "kanban_user";
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<ApiUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // Hydrate session from localStorage on first mount (client only).
   useEffect(() => {
-    const storedToken = window.localStorage.getItem(TOKEN_KEY);
-    const storedUser = window.localStorage.getItem(USER_KEY);
+    let cancelled = false;
 
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
-  }, []);
+    const fetchUser = async () => {
+      try {
+        const data = await meRequest();
 
-  const persistSession = useCallback((nextToken: string, nextUser: ApiUser) => {
-    window.localStorage.setItem(TOKEN_KEY, nextToken);
-    window.localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+        if (!cancelled) setUser(data.user);
+      } catch (error) {
+        // No valid cookie / session — stay logged out, no error to show.
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
 
-    setToken(nextToken);
-    setUser(nextUser);
+    fetchUser();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const login = useCallback(
@@ -62,13 +65,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await loginRequest({ email, password });
         toast.success(data.message);
 
-        persistSession(data.token, data.user);
+        setUser(data.user);
         router.push("/boards");
       } catch (error) {
         throw new Error(extractErrorMessage(error, "Login failed"));
       }
     },
-    [persistSession, router],
+    [router],
   );
 
   const register = useCallback(
@@ -78,36 +81,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.success(res.message);
 
         const data = await loginRequest({ email, password });
-        persistSession(data.token, data.user);
+        setUser(data.user);
         router.push("/boards");
       } catch (error) {
         throw new Error(extractErrorMessage(error, "Registration failed"));
       }
     },
-    [persistSession, router],
+    [router],
   );
 
-  const logout = useCallback(() => {
-    window.localStorage.removeItem(TOKEN_KEY);
-    window.localStorage.removeItem(USER_KEY);
-
-    setToken(null);
-    setUser(null);
-    toast.success("Successfully log out");
-    router.push("/login");
+  const logout = useCallback(async () => {
+    try {
+      // Revoke refresh token and clear cookies on the backend.
+      await logoutRequest();
+    } catch (error) {
+      // Even if the request fails, clear local state.
+    } finally {
+      setUser(null);
+      toast.success("Successfully logged out.");
+      router.push("/login");
+    }
   }, [router]);
 
   const value = useMemo(
     () => ({
       user,
-      token,
       isLoading,
-      isAuthenticated: Boolean(token),
+      isAuthenticated: Boolean(user),
       login,
       register,
       logout,
     }),
-    [user, token, isLoading, login, register, logout],
+    [user, isLoading, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
