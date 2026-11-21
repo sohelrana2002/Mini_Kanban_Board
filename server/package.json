@@ -5,7 +5,10 @@
   "scripts": {
     "build": "npx prisma generate && tsc",
     "dev": "ts-node-dev --respawn --transpile-only server.ts",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "prisma": {
     "schema": "src/prisma/schema.prisma",
