@@ -5,7 +5,7 @@ module.exports = {
   roots: ["<rootDir>/test"],
 
   transform: {
-    "^.+\\.ts$": ["ts-jest", { isolatedModules: true }],
+    "^.+\\.ts$": ["ts-jest"],
   },
 
   setupFiles: ["<rootDir>/test/setupEnv.ts"],
