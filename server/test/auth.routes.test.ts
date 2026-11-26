@@ -96,3 +96,50 @@ describe("POST /api/auth/register", () => {
     expect(prismaMock.user.create).not.toHaveBeenCalled();
   });
 });
+
+describe("POST /api/auth/login", () => {
+  const body = {
+    email: "a@b.com",
+    password: "123456",
+  };
+
+  it("returns the user and sets both httpOnly cookies - no token in the JSON body", async () => {
+    prismaMock.user.findUnique.mockResolvedValue(user as any);
+    mockedBcrypt.comparePassword.mockResolvedValue(true);
+
+    // mock refresh token creation in the database after a successful login
+    prismaMock.refreshToken.create.mockResolvedValue({} as any);
+
+    const res = await api().post("/api/auth/login").send(body);
+
+    expect(res.status).toBe(200);
+    expect(res.body.user).toEqual({
+      id: 1,
+      email: "a@b.com",
+      name: "Alice",
+    });
+
+    // ensure authentication tokens are not exposed in the JSON response.
+    expect(res.body.token).toBeUndefined();
+    expect(res.body.accessToken).toBeUndefined();
+    expect(res.body.refreshToken).toBeUndefined();
+
+    // extract the Set-Cookie headers from the HTTP response.
+    const cookies = setCookie(res);
+
+    // find the access and refresh token cookies separately.
+    const access = cookies.find((c) => c.startsWith("accessToken="))!;
+    const refresh = cookies.find((c) => c.startsWith("refreshToken="))!;
+
+    // ensure both cookies are protected with the HttpOnly flag.
+    expect(access).toMatch(/HttpOnly/i);
+
+    // the access token cookie should be available on all routes. ensure the path is followed by a semicolon or the end of the string.
+    expect(access).toMatch(/Path=\/(;|$)/);
+
+    expect(refresh).toMatch(/HttpOnly/i);
+
+    // the refresh token cookie should only be sent to auth routes(/api/auth).
+    expect(refresh).toMatch(/Path=\/api\/auth(;|$)/);
+  });
+});
